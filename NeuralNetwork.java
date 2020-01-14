@@ -51,16 +51,23 @@ public class NeuralNetwork
       networkBack.clear(networkFront);
    }
    
-   public void backProp(double[] input, double[] expected)
+   public double backProp(double[] input, double[] expected)
    {
+	  double error = 0; 
+	  
       double[] output = calc(input);
       Node[] outputLayer = networkBack.getPrevLayer();
       
       for(int i = 0; i < outputLayer.length; i++)
-         outputLayer[i].setDer(output[i] - expected[i]);//sets derivative for output layer        
+      {
+         outputLayer[i].setDer(output[i] - expected[i]);//sets derivative for output layer 
+         error += 0.5 * Math.pow(output[i] - expected[i], 2);
+      }
       
       networkBack.backProp(networkFront);
       clear();
+      
+      return error;
    }
    
    public void updateWeight()

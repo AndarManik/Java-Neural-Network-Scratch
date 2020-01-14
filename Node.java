@@ -48,14 +48,12 @@ public class Node
    
    private double activation(double input)//reLu if it is less than 0 return 0 return x if else
    {
-      return Math.max(0, input);
+      return Math.exp(input) / (Math.exp(input) + 1);
    }
    
    private double activationDer()
    {
-      if(val == 0)
-         return 0;
-      return 1;
+      return val * (1-val);
    }
    
    public void setVal(double input)
@@ -76,10 +74,9 @@ public class Node
       for(int i = 0; i < derWeight.length; i++)
          derWeight[i] += prevLayer[i].getVal() * activationDer() * der;
          
-      derBias += activation(val) / val * der;
+      derBias += activationDer() * der;
       
       derCounter++;
-      
    }
    
    public double[] getWeight()
@@ -92,8 +89,8 @@ public class Node
       return derWeight;
    }
    
-   //assumes prevLayers weights have been calculated. Calulates the derivatives for the nodes which are two layers behind it.
-   // in doing so sets up the asumption for backProp on the next layer up. Stops recursion when the layer two layers behind it is the front of the network
+   //assumes prevLayers weights have been calculated. Calculates the derivatives for the nodes which are two layers behind it.
+   // in doing so sets up the assumption for backProp on the next layer up. Stops recursion when the layer two layers behind it is the front of the network
    public void backProp(Node[] networkFront)
    {  
       Node[] twoLayerBack = prevLayer[0].getPrevLayer();
@@ -125,6 +122,10 @@ public class Node
          prevLayer[i].updateWeight();
          derWeight[i] = 0;
       }
+      bias -= derBias/derCounter;
+      derBias = 0;
+      
+      
       
       derCounter = 0;
    }
