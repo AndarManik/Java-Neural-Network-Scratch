@@ -7,11 +7,11 @@ public class NeuralNetworkTest
       double[] input1 = {0,0};
       double[] output1 = {0};
       
-      double[] input2 = {1,0};
-      double[] output2 = {1};
-      
-      double[] input3 = {0,1};
+      double[] input3 = {1,0};
       double[] output3 = {1};
+      
+      double[] input2 = {0,1};
+      double[] output2 = {1};
       
       double[] input4 = {1,1};
       double[] output4 = {0};
@@ -24,17 +24,18 @@ public class NeuralNetworkTest
       {
     	  curError = 0;
     	  
+    	  
     	  System.out.println("00 " + nn.calc(input1)[0]);
     	  nn.clear();
     	  curError += nn.backProp(input1, output1);
 
       
-    	  System.out.println("10 " + nn.calc(input2)[0]);
+    	  System.out.println("01 " + nn.calc(input2)[0]);
     	  nn.clear();
     	  curError += nn.backProp(input2, output2);
 
       
-    	  System.out.println("01 " + nn.calc(input3)[0]);
+    	  System.out.println("10 " + nn.calc(input3)[0]);
     	  nn.clear();
     	  curError += nn.backProp(input3, output3);
 
