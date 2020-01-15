@@ -3,11 +3,12 @@ public class NeuralNetwork
 {
    private Node networkBack;
    private Node[] networkFront;
-   private int[] dim;
+   private int derCounter;
+   private double rate = 0.1;
    
    public NeuralNetwork(int[] dim)//creates networkBack with dimensions;
    {
-      this.dim = dim;
+	  derCounter = 0;
       networkFront = new Node[1];
       Node[] prevLayer = new Node[dim[0]];//create input layer node array using nodeFront as the prevLayer
       
@@ -36,7 +37,7 @@ public class NeuralNetwork
       for(int i = 0; i < inputLayer.length; i++)//initialize networkBack
          inputLayer[i].setVal(input[i]);
          
-      networkBack.getVal();//calc networkBack
+      networkBack.getVal();//calculate networkBack
       
       double[] output = new double[networkBack.getPrevLayer().length];
       
@@ -51,21 +52,37 @@ public class NeuralNetwork
       networkBack.clear(networkFront);
    }
    
-   public void backProp(double[] input, double[] expected)
+   public double backProp(double[] input, double[] expected)
    {
+	  double error = 0; 
+	  
       double[] output = calc(input);
       Node[] outputLayer = networkBack.getPrevLayer();
       
       for(int i = 0; i < outputLayer.length; i++)
-         outputLayer[i].setDer(output[i] - expected[i]);//sets derivative for output layer        
+      {
+         outputLayer[i].setDer(output[i] - expected[i]);//sets derivative for output layer 
+         error += 0.5 * Math.pow(output[i] - expected[i], 2);
+      }
       
       networkBack.backProp(networkFront);
       clear();
+      
+      derCounter++;
+      
+      return error;
    }
    
    public void updateWeight()
    {
       for(int i = 0; i < networkBack.getPrevLayer().length; i++)
-         networkBack.getPrevLayer()[i].updateWeight();
+         networkBack.getPrevLayer()[i].updateWeight(derCounter, rate);
+      
+      derCounter = 0;
+   }
+   
+   public void setRate(double rate)
+   {
+	   this.rate = rate;
    }
 }

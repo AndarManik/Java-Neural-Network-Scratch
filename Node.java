@@ -1,12 +1,12 @@
 public class Node
 {
+   private Node[] prevLayer;
+   
    private double val;
    private boolean isVal;
    
    private double der;
-   private int derCounter;
-   
-   private Node[] prevLayer;
+   private boolean isDer;
    
    private double[] weight;
    private double[] derWeight;
@@ -14,18 +14,15 @@ public class Node
    private double bias;
    private double derBias;
    
-   private final double RATE = 0.1;
-   
    public Node(Node[] inLayer)//set values for the previous layer and set random weights
    {
       prevLayer = inLayer;
       weight = new double[prevLayer.length];
       derWeight = new double[prevLayer.length];
-      derCounter = 0;
       derBias = 0;
       
       for(int i = 0; i < prevLayer.length; i++)
-         weight[i] = Math.random();
+         weight[i] = Math.random() * 2 - 1;
          
       bias = Math.random();
    }
@@ -46,16 +43,14 @@ public class Node
       return val;
    }
    
-   private double activation(double input)//reLu if it is less than 0 return 0 return x if else
+   private double activation(double input)//hyperbolic tangent
    {
-      return Math.max(0, input);
+      return (Math.exp(input) - Math.exp(input * -1)) / (Math.exp(input) + Math.exp(input * -1));
    }
    
    private double activationDer()
    {
-      if(val == 0)
-         return 0;
-      return 1;
+      return 1 - val * val;
    }
    
    public void setVal(double input)
@@ -69,17 +64,21 @@ public class Node
       return prevLayer;
    }
    
+   public double getDer() 
+   {
+	   return der;   
+   }
+   
    public void setDer(double der)
    {
-      this.der = der;
+	  this.der = der;
       
       for(int i = 0; i < derWeight.length; i++)
          derWeight[i] += prevLayer[i].getVal() * activationDer() * der;
          
-      derBias += activation(val) / val * der;
+      derBias += activationDer() * der;
       
-      derCounter++;
-      
+      isDer = true;
    }
    
    public double[] getWeight()
@@ -92,8 +91,8 @@ public class Node
       return derWeight;
    }
    
-   //assumes prevLayers weights have been calculated. Calulates the derivatives for the nodes which are two layers behind it.
-   // in doing so sets up the asumption for backProp on the next layer up. Stops recursion when the layer two layers behind it is the front of the network
+   //assumes prevLayers weights have been calculated. Calculates the derivatives for the nodes which are two layers behind it.
+   // in doing so sets up the assumption for backProp on the next layer up. Stops recursion when the layer two layers behind it is the front of the network
    public void backProp(Node[] networkFront)
    {  
       Node[] twoLayerBack = prevLayer[0].getPrevLayer();
@@ -106,7 +105,7 @@ public class Node
          double sumDer = 0;
          
          for(int j = 0; j < prevLayer.length; j++)//sum the derivatives of node
-            sumDer += prevLayer[j].getDerWeight()[i] / twoLayerBack[i].getVal() * prevLayer[j].getWeight()[i];
+        		 sumDer += prevLayer[j].activationDer() * prevLayer[j].getDer() * prevLayer[j].getWeight()[i];
            
          twoLayerBack[i].setDer(sumDer);
       }
@@ -114,19 +113,21 @@ public class Node
       prevLayer[0].backProp(networkFront);//recur on layer down
    }
    
-   public void updateWeight()
+   public void updateWeight(int derCounter, double rate)
    {
-      if(derCounter == 0)
+      if(isDer == false)
          return;
          
       for(int i = 0; i < weight.length; i++)
       {
-         weight[i] -= derWeight[i] * RATE / derCounter;
-         prevLayer[i].updateWeight();
+         weight[i] -= derWeight[i] * rate / derCounter;
+         prevLayer[i].updateWeight(derCounter, rate);
          derWeight[i] = 0;
       }
       
-      derCounter = 0;
+      bias -= derBias * rate / derCounter;
+      derBias = 0;
+      isDer = false;
    }
    
    public void clear(Node[] networkFront)
