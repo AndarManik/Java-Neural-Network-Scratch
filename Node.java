@@ -1,3 +1,5 @@
+import java.util.List;
+
 public class Node
 {
    private Node[] prevLayer;
@@ -8,23 +10,19 @@ public class Node
    private double der;
    private boolean isDer;
    
-   private double[] weight;
+   private double[] weight;//last weight is bias
    private double[] derWeight;
-   
-   private double bias;
-   private double derBias;
    
    public Node(Node[] inLayer)//set values for the previous layer and set random weights
    {
       prevLayer = inLayer;
-      weight = new double[prevLayer.length];
-      derWeight = new double[prevLayer.length];
-      derBias = 0;
+      weight = new double[prevLayer.length + 1];
+      derWeight = new double[prevLayer.length + 1];
       
-      for(int i = 0; i < prevLayer.length; i++)
+      for(int i = 0; i < weight.length; i++)
          weight[i] = Math.random() * 2 - 1;
          
-      bias = Math.random();
+      weight[weight.length - 1] = Math.random();
    }
    
    public double getVal()
@@ -37,7 +35,7 @@ public class Node
       for(int i = 0; i < prevLayer.length; i++)
          sum += prevLayer[i].getVal() * weight[i];
       
-      val = activation(sum + bias);
+      val = activation(sum + weight[weight.length -1]);
       isVal = true;
       
       return val;
@@ -73,10 +71,10 @@ public class Node
    {
 	  this.der = der;
       
-      for(int i = 0; i < derWeight.length; i++)
+      for(int i = 0; i < prevLayer.length; i++)
          derWeight[i] += prevLayer[i].getVal() * activationDer() * der;
          
-      derBias += activationDer() * der;
+      derWeight[derWeight.length - 1] += activationDer() * der;
       
       isDer = true;
    }
@@ -89,6 +87,19 @@ public class Node
    public double[] getDerWeight()
    {
       return derWeight;
+   }
+   
+   public void saveWeightData(List<double[]> weightData, boolean recur, Node[] networkFront)
+   {
+	   if(recur && !prevLayer[0].prevLayer.equals(networkFront))
+	   {
+		   prevLayer[0].saveWeightData(weightData, true, networkFront);
+		   
+		   for(int i = 1; i < prevLayer.length; i++)
+			   prevLayer[i].saveWeightData(weightData, false, networkFront);
+	   }
+	   
+	   weightData.add(weight);
    }
    
    //assumes prevLayers weights have been calculated. Calculates the derivatives for the nodes which are two layers behind it.
@@ -118,15 +129,15 @@ public class Node
       if(isDer == false)
          return;
          
-      for(int i = 0; i < weight.length; i++)
+      for(int i = 0; i < prevLayer.length; i++)
       {
          weight[i] -= derWeight[i] * rate / derCounter;
          prevLayer[i].updateWeight(derCounter, rate);
          derWeight[i] = 0;
       }
       
-      bias -= derBias * rate / derCounter;
-      derBias = 0;
+      weight[weight.length - 1] -= derWeight[derWeight.length - 1] * rate / derCounter;
+      derWeight[derWeight.length - 1] = 0;
       isDer = false;
    }
    
@@ -134,13 +145,14 @@ public class Node
    {
       if(!isVal)
          return;
+      
       val = 0;
       isVal = false;
+      
       if(!prevLayer.equals(networkFront))
       {
          for(int i = 0; i < prevLayer.length; i++)
             prevLayer[i].clear(networkFront);
       }
-      
    }
 }
