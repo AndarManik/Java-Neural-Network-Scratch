@@ -1,3 +1,5 @@
+import java.io.IOException;
+
 public class NeuralNetworkTest
 {
    public static void main(String[] args)
@@ -18,13 +20,10 @@ public class NeuralNetworkTest
       
       double curError;
       
-      
-      
-      for(int i = 0; i < 10000000; i++)
+      for(int i = 0; i < 1000; i++)
       {
     	  curError = 0;
-    	  
-    	  
+    	 
     	  System.out.println("00 " + nn.calc(input1)[0]);
     	  nn.clear();
     	  curError += nn.backProp(input1, output1);
@@ -48,9 +47,30 @@ public class NeuralNetworkTest
     	  nn.updateWeight();
       }
       
+      String filePath = nn.saveNetwork("xor.txt");
       
+      NeuralNetwork nnFile = new NeuralNetwork(filePath);
       
+      curError = 0;
+ 	 
+	  System.out.println("00 " + nnFile.calc(input1)[0]);
+	  nnFile.clear();
+	  curError += nnFile.backProp(input1, output1);
+
+  
+	  System.out.println("01 " + nnFile.calc(input2)[0]);
+	  nnFile.clear();
+	  curError += nnFile.backProp(input2, output2);
+
+  
+	  System.out.println("10 " + nnFile.calc(input3)[0]);
+	  nnFile.clear();
+	  curError += nnFile.backProp(input3, output3);
+
       
-      
+	  System.out.println("11 " + nnFile.calc(input4)[0]);
+	  nnFile.clear();
+	  curError += nnFile.backProp(input4, output4);
+	  System.out.println(curError);
    }
 }
