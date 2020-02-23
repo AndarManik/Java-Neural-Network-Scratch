@@ -1,3 +1,4 @@
+package RecurrentNeuralNetwork;
 import java.util.List;
 
 public class Node
@@ -13,7 +14,10 @@ public class Node
    private double[] weight;//last weight is bias
    private double[] derWeight;
    
-   public Node(Node[] inLayer)//set values for the previous layer and set random weights
+   private Activation activation;
+   private ActivationDer activationDer;
+   
+   public Node(Node[] inLayer)//set values for the previous  layer and set random weights
    {
       prevLayer = inLayer;
       weight = new double[prevLayer.length + 1];
@@ -23,6 +27,21 @@ public class Node
          weight[i] = Math.random() * 2 - 1;
          
       weight[weight.length - 1] = Math.random();
+   }
+   
+   public Node(Node[] inLayer, Activation activate, ActivationDer activateDer)//set values for the previous  layer and set random weights
+   {
+      prevLayer = inLayer;
+      weight = new double[prevLayer.length + 1];
+      derWeight = new double[prevLayer.length + 1];
+      
+      for(int i = 0; i < weight.length; i++)
+         weight[i] = Math.random() * 2 - 1;
+         
+      weight[weight.length - 1] = Math.random();
+      
+      activation = activate;
+      activationDer = activateDer;
    }
    
    public double getVal()
@@ -35,20 +54,10 @@ public class Node
       for(int i = 0; i < prevLayer.length; i++)
          sum += prevLayer[i].getVal() * weight[i];
       
-      val = activation(sum + weight[weight.length -1]);
+      val = activation.activate(sum + weight[weight.length -1]);
       isVal = true;
       
       return val;
-   }
-   
-   private double activation(double input)//hyperbolic tangent
-   {
-      return (Math.exp(input) - Math.exp(input * -1)) / (Math.exp(input) + Math.exp(input * -1));
-   }
-   
-   private double activationDer()
-   {
-      return 1 - val * val;
    }
    
    public void setVal(double input)
@@ -72,9 +81,9 @@ public class Node
 	  this.der = der;
       
       for(int i = 0; i < prevLayer.length; i++)
-         derWeight[i] += prevLayer[i].getVal() * activationDer() * der;
+         derWeight[i] += prevLayer[i].getVal() * activationDer.activateDer(val) * der;
          
-      derWeight[derWeight.length - 1] += activationDer() * der;
+      derWeight[derWeight.length - 1] += activationDer.activateDer(val) * der;
       
       isDer = true;
    }
@@ -116,7 +125,7 @@ public class Node
          double sumDer = 0;
          
          for(int j = 0; j < prevLayer.length; j++)//sum the derivatives of node
-        		 sumDer += prevLayer[j].activationDer() * prevLayer[j].getDer() * prevLayer[j].getWeight()[i];
+        		 sumDer += prevLayer[j].activationDer.activateDer(val) * prevLayer[j].getDer() * prevLayer[j].getWeight()[i];
            
          twoLayerBack[i].setDer(sumDer);
       }
@@ -154,5 +163,25 @@ public class Node
          for(int i = 0; i < prevLayer.length; i++)
             prevLayer[i].clear(networkFront);
       }
+   }
+   
+   interface Activation
+   {
+	   double activate(double val);
+	   
+	   default Activation tanh()
+	   {
+		   return (val) -> (Math.exp(val) - Math.exp(val * -1)) / (Math.exp(val) + Math.exp(val * -1));
+	   }
+   }
+   
+   interface ActivationDer
+   {
+	   double activateDer(double val);
+	   
+	   default ActivationDer tanhDer()
+	   {
+		   return (val) -> 1 - val * val;
+	   }
    }
 }
