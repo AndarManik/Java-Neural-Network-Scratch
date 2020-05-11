@@ -7,10 +7,12 @@ public class NeuralNetwork
    
    private Node[] outputLayer;
    private Node[] inputLayer;
+   
    private List<double[]> weightData = new ArrayList<double[]>();
+   private List<double[]> derWeightData = new ArrayList<double[]>();
    
    private double rate = 0.001;
-   private double momentum = 1.0;
+   private double momentum = 1;
    
    private Activation activation = (val) -> (Math.exp(val) - Math.exp(val * -1)) / (Math.exp(val) + Math.exp(val * -1));
    private ActivationDer activationDer = (val, preAct) -> 1 - val * val;
@@ -24,7 +26,7 @@ public class NeuralNetwork
       construct();
    }
    
-   public NeuralNetwork(String fileName, Activation activate, ActivationDer activateDer) throws FileNotFoundException
+   public NeuralNetwork(String fileName, Activation activate, ActivationDer activateDer) throws FileNotFoundException //creates a NeuralNetwork with activation function which is saved in file
    {
 		   activation = activate;
 		   activationDer = activateDer;
@@ -71,10 +73,13 @@ public class NeuralNetwork
 	    outputLayer = prevLayer;
 	      
 		for(int i = 0; i < outputLayer.length; i++)
+		{
 			outputLayer[i].saveWeightData(weightData, i == 0, inputLayer);
+			outputLayer[i].saveDerWeightData(derWeightData, i == 0, inputLayer);
+		}
    }
    
-   public double[] calc(double[] input)
+   public double[] calc(double[] input)// forward pass of network
    {  
       for(int i = 0; i < inputLayer.length; i++)//initialize networkBack
          inputLayer[i].setVal(input[i]);
@@ -95,7 +100,15 @@ public class NeuralNetwork
 		   outputNode.clear(outputLayer);
    }
    
-   public double backProp(double[] input, double[] expected)
+   public void clearDer()//clear the stored gradient
+   {
+	   for(Node outputNode: outputLayer)
+		   outputNode.setDer(0);
+	   
+	   outputLayer[0].clearDer();
+   }
+   
+   public double backProp(double[] input, double[] expected)// calculates and add the current cost gradient to the stored cost gradient: calculation based on expectation
    {
 	  double error = 0;
 	  
@@ -116,7 +129,21 @@ public class NeuralNetwork
       return error;
    }
    
-   public void updateWeight()
+   public void backPropGrad(double[] input, double[] gradients)// backProp against a calculated gradient
+   {
+	   for(int i = 0; i < inputLayer.length; i++)//initialize networkBack
+		  inputLayer[i].setVal(input[i]);
+	      
+	   for(int i = 0; i < outputLayer.length; i++)
+		  outputLayer[i].setDer(gradients[i]);//sets derivative for output layer 
+	      
+	   for(Node outputNode: outputLayer)
+		   outputNode.backProp(outputLayer);
+	      
+	   clear();
+   }
+   
+   public void updateWeight()//update weights based on gradients and clear stored gradients
    {
       for(Node outputNode: outputLayer)
          outputNode.updateWeight();
@@ -135,6 +162,37 @@ public class NeuralNetwork
    public int[] getDim()
    {
 	   return dim;
+   }
+   
+   public Node[] getInputLayer()
+   {
+	   return inputLayer;
+   }
+   
+   public Node[] getOutputLayer()
+   {
+	   return outputLayer;
+   }
+   
+   public double[] getInputDer(double[] input, double[] expected)
+   {   
+	   for(int i = 0; i < inputLayer.length; i++)//initialize networkBack
+		         inputLayer[i].setVal(input[i]);
+	      
+	   for(int i = 0; i < outputLayer.length; i++)
+	      outputLayer[i].setDer(outputLayer[i].getVal() - expected[i]);//sets derivative for output layer 
+	      
+	      for(Node outputNode: outputLayer)
+			   outputNode.backProp(outputLayer);
+	      
+	   double[] layerDer = new double[inputLayer.length];
+		   
+	   for(int i = 0; i < layerDer.length; i++)
+		   layerDer[i] = inputLayer[i].getDer();
+	   
+	   clear();
+	      
+	   return layerDer;
    }
    
    public void outputActivation(Activation activate, ActivationDer activateDer)
@@ -223,7 +281,7 @@ public class NeuralNetwork
          derWeight = new double[prevLayer.length + 1];
          
          for(int i = 0; i < weight.length; i++)
-            weight[i] = (Math.random() * 2 - 1) * 0.01;
+            weight[i] = (Math.random() * 2 - 1) * 0.001;
          
          activation = activate;
          activationDer = activateDer;
@@ -301,10 +359,8 @@ public class NeuralNetwork
       {
    	   if(recur && !prevLayer.equals(inputLayer))
    	   {
-   		   prevLayer[0].saveWeightData(weightData, true, inputLayer);
-   		   
-   		   for(int i = 1; i < prevLayer.length; i++)
-   			   prevLayer[i].saveWeightData(weightData, false, inputLayer);
+   		   for(int i = 0; i < prevLayer.length; i++)
+   			   prevLayer[i].saveWeightData(weightData, i == 0, inputLayer);
    	   }
    	   
    	   weightData.add(weight);
@@ -325,20 +381,18 @@ public class NeuralNetwork
       // in doing so sets up the assumption for backProp on the next layer up. Stops recursion when the layer two layers behind it is the front of the network
       public void backProp(Node[] currLayer)
       {  
-         if(prevLayer.equals(inputLayer))
-            return;
-         
-         for(int i = 0; i < prevLayer.length; i++)
+    	 for(int i = 0; i < prevLayer.length; i++)
          {
             double sumDer = 0;
             
-            for(int j = 0; j < currLayer.length; j++)//sum the derivatives of node
-           		 sumDer += activationDer.activateDer(currLayer[j].getVal(), currLayer[j].getPreAct())  * currLayer[j].getWeight()[i] * currLayer[j].getDer();
+            for(Node curNode: currLayer)//sum the derivatives of node
+           		 sumDer += activationDer.activateDer(curNode.getVal(), curNode.getPreAct())  * curNode.getWeight()[i] * curNode.getDer();
               
             prevLayer[i].setDer(sumDer);
          }
          
-         prevLayer[0].backProp(prevLayer);//recur on layer down
+         if(!prevLayer.equals(inputLayer))
+        	 prevLayer[0].backProp(prevLayer);//recur on layer down
       }
       
       public void updateWeight()
@@ -380,6 +434,15 @@ public class NeuralNetwork
             for(int i = 0; i < prevLayer.length; i++)
                prevLayer[i].clear(prevLayer);
          }
+      }
+      
+      public void clearDer()
+      {
+    	  for(Node prevNode: prevLayer)
+    		  prevNode.setDer(0.0);
+    	  
+    	  if(!prevLayer.equals(inputLayer))
+    		  prevLayer[0].clearDer();
       }
    }
    interface Activation
